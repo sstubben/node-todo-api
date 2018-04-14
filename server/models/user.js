@@ -32,7 +32,7 @@ var UserSchema = new mongoose.Schema({
   }]
 })
 
-// Schema is necessary if you want to add instance methods:
+// Schema is necessary if you want to add instance methods / userObject.function :
 
 UserSchema.methods.toJSON = function () {
   var user = this
@@ -53,6 +53,28 @@ UserSchema.methods.generateAuthToken = function () {
 
   return user.save().then( () => {
     return token
+  })
+}
+
+// Adding model method / User.function
+
+UserSchema.statics.findByToken = function (token) {
+  var User = this; // note it's the model not the object
+  var decoded;
+
+  try {
+    decoded = jwt.verify(token, '123qwe')
+  } catch (e) {
+    // return new Promise((resolve, reject) => {
+    //   reject()
+    // })
+    return Promise.reject()
+  }
+
+  return User.findOne({
+    '_id': decoded._id,
+    'tokens.token': token,
+    'tokens.access': 'auth'
   })
 }
 
