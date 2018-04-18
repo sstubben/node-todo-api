@@ -37,7 +37,7 @@ var UserSchema = new mongoose.Schema({
 
 UserSchema.methods.toJSON = function () {
   var user = this
-  // toObject is responsible for taking the mongooese variable (in this case user)
+  // toObject is responsible for taking the mongoose variable (in this case user)
   // and convert it into a regular object, where only the properties available
   // in the document exists
   var userObject = user.toObject()
@@ -60,7 +60,7 @@ UserSchema.methods.generateAuthToken = function () {
 // Adding model method / User.function
 
 UserSchema.statics.findByToken = function (token) {
-  var User = this; // note it's the model not the object
+  var User = this // note it's the model not the object
   var decoded;
 
   try {
@@ -77,6 +77,26 @@ UserSchema.statics.findByToken = function (token) {
     'tokens.token': token,
     'tokens.access': 'auth'
   })
+}
+
+UserSchema.statics.findByCredentials = function (email,password) {
+  // verify that user exists with email
+  var User = this
+  return User.findOne({email}).then((user) => {
+    if (!user) {
+      return Promise.reject()
+    }
+    return new Promise((resolve, reject) => {
+      bcrypt.compare(password,user.password,(err,res) => {
+        if (res) {
+          resolve(user)
+        } else {
+          reject()
+        }
+      })
+    })
+  })
+
 }
 
 // mongoose middleware can be used to apply functions before
