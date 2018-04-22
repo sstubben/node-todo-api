@@ -35,16 +35,6 @@ var UserSchema = new mongoose.Schema({
 
 // Schema is necessary if you want to add instance methods / userObject.function :
 
-UserSchema.methods.toJSON = function () {
-  var user = this
-  // toObject is responsible for taking the mongoose variable (in this case user)
-  // and convert it into a regular object, where only the properties available
-  // in the document exists
-  var userObject = user.toObject()
-
-  return _.pick(userObject, ['_id', 'email'])
-}
-
 UserSchema.methods.generateAuthToken = function () {
   var user = this
   var access = 'auth'
@@ -57,7 +47,50 @@ UserSchema.methods.generateAuthToken = function () {
   })
 }
 
+UserSchema.methods.removeToken = function (token) {
+  // mongodb $pull let's your remove items from an array that match certain criteria
+  var user = this
+
+  return user.update({
+    $pull: {
+      tokens: {
+        token: token
+      }
+    }
+  })
+
+}
+
+UserSchema.methods.toJSON = function () {
+  var user = this
+  // toObject is responsible for taking the mongoose variable (in this case user)
+  // and convert it into a regular object, where only the properties available
+  // in the document exists
+  var userObject = user.toObject()
+
+  return _.pick(userObject, ['_id', 'email'])
+}
+
 // Adding model method / User.function
+
+UserSchema.statics.findByCredentials = function (email,password) {
+  // verify that user exists with email
+  var User = this
+  return User.findOne({email}).then((user) => {
+    if (!user) {
+      return Promise.reject()
+    }
+    return new Promise((resolve, reject) => {
+      bcrypt.compare(password,user.password,(err,res) => {
+        if (res) {
+          resolve(user)
+        } else {
+          reject()
+        }
+      })
+    })
+  })
+}
 
 UserSchema.statics.findByToken = function (token) {
   var User = this // note it's the model not the object
@@ -77,26 +110,6 @@ UserSchema.statics.findByToken = function (token) {
     'tokens.token': token,
     'tokens.access': 'auth'
   })
-}
-
-UserSchema.statics.findByCredentials = function (email,password) {
-  // verify that user exists with email
-  var User = this
-  return User.findOne({email}).then((user) => {
-    if (!user) {
-      return Promise.reject()
-    }
-    return new Promise((resolve, reject) => {
-      bcrypt.compare(password,user.password,(err,res) => {
-        if (res) {
-          resolve(user)
-        } else {
-          reject()
-        }
-      })
-    })
-  })
-
 }
 
 // mongoose middleware can be used to apply functions before
